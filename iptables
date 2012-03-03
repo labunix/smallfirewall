@@ -1,0 +1,82 @@
+#!/bin/bash
+# Start/stop the iptables script.
+#
+### BEGIN INIT INFO
+# Provides:          iptables
+# Required-Start:    $remote_fs $syslog $time
+# Required-Stop:     $remote_fs $syslog $time
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Custom background script
+# Description:       iptables v1.4.2 for Squeeze
+#                    Last Update:2012/02/23
+#                    Author     :labunix@linux.jp
+#                    filter [input|forward|output] table only
+### END INIT INFO
+#
+# environment
+#export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+set -e
+
+if [ `id -u` -ne "0" ];then
+  echo "Sorry,Not Permit User!"
+  exit 1
+fi
+
+iptables -V > /dev/null || exit 1
+
+function sfwerr() {
+  echo $@
+  iptables -F INPUT
+  iptables -F FORWARD
+  iptables -F OUTPUT
+  iptables -F
+  iptables -P INPUT ACCEPT
+  iptables -P FORWARD ACCEPT
+  iptables -P OUTPUT ACCEPT
+  exit 1
+}
+
+function sfwinit() {
+  test -x /etc/smallfirewall || exit 1
+  /bin/bash -x /etc/smallfirewall > /var/log/sfw.log || sfwerr
+  touch /etc/iptables-save
+}
+
+# for save and restore
+test -f /etc/iptables-save || sfwinit
+test -f /etc/iptables-save || sfwerr "ERROR:Please Check /etc/iptables-save"
+
+case $1 in
+start)
+  iptables-restore -c /etc/iptables-save || sfwerr "ERROR:Resotre error"
+  ;;
+stop)
+  iptables -F INPUT
+  iptables -F FORWARD
+  iptables -F OUTPUT
+  iptables -F
+  iptables -P INPUT ACCEPT
+  iptables -P FORWARD ACCEPT
+  iptables -P OUTPUT ACCEPT
+  ;;
+reload|restart)
+  iptables-save -c > /etc/iptables-save ||  sfwerr "ERROR:Save error"
+  iptables -F INPUT
+  iptables -F FORWARD
+  iptables -F OUTPUT
+  iptables -F
+  iptables -P INPUT ACCEPT
+  iptables -P FORWARD ACCEPT
+  iptables -P OUTPUT ACCEPT
+  iptables-restore -c /etc/iptables-save || sfwerr "ERROR:Resotre error"
+  ;;
+status)
+  iptables -L -v -n | grep "^Chain"
+  ;;
+*)
+  echo "Usage: $0 {start|stop|reload|restart|status}"
+  exit 2
+  ;;
+esac
+exit 0

@@ -1,0 +1,133 @@
+#!/bin/bash
+# Last Update:	2012/02/23
+# Author:	labunix@linux.jp
+#
+set -e
+
+function fwerr() {
+  echo "$@"
+  exit 1
+}
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -P OUTPUT ACCEPT
+
+NETTEMP=$(env LANG=C ip addr | grep "inet " | grep eth0 | awk '{print $2}')
+export HOMENET=$(echo ${NETTEMP} | sed s%".[0-9]*/"%".0/"%)
+export HOMECAST=$(echo ${NETTEMP} | sed s%".[0-9]*/"%".255/"%)
+export HOMEIP=$( echo ${NETTEMP} | awk -F\/ '{print $1}')
+export SAFENIC=$(env LANG=C ip addr | grep "inet " | grep -v eth0 | \
+  grep "global\|host" | sed s/".*global "//g | sed s/".*host "//g)
+export LIMITOPT="-m limit --limit 10/s --limit-burst 4 "
+# SAFE NIC lo vmnet1 vmnet8
+
+for mynic in ${SAFENIC};do
+  iptables -A INPUT -i ${mynic} -p tcp -j ACCEPT
+  iptables -A OUTPUT -o ${mynic} -p tcp -j ACCEPT
+
+  iptables -A INPUT -i ${mynic} -p udp -j ACCEPT
+  iptables -A OUTPUT -o ${mynic} -p udp -j ACCEPT
+
+  iptables -A INPUT -i ${mynic} -p icmp -j ACCEPT
+  iptables -A OUTPUT -o ${mynic} -p icmp -j ACCEPT
+
+  iptables -A INPUT -i ${mynic} ${LIMITOPT} -j LOG \
+    --log-prefix "iptables-in " --log-level=info
+  iptables -A FORWARD -i ${mynic} ${LIMITOPT} \
+    -j LOG --log-prefix "iptables-fo " --log-level=info
+  iptables -A OUTPUT -o ${mynic} ${LIMITOPT} \
+    -j LOG --log-prefix "iptables-ou " --log-level=info
+  
+  iptables -A INPUT -i ${mynic} -p all -j ACCEPT
+  iptables -A FORWARD -i ${mynic} -p all -j ACCEPT
+  iptables -A OUTPUT -o ${mynic} -p all -j ACCEPT
+done
+
+# eth0 section
+
+# ICMP
+
+iptables -A INPUT -i eth0 -p icmp -d ${HOMENET} -j ACCEPT
+iptables -A OUTPUT -o eth0 -p icmp -s ${HOMENET} -j ACCEPT
+
+iptables -A INPUT -i eth0 -p icmp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-in " --log-level=info
+iptables -A OUTPUT -o eth0 -p icmp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-ou " --log-level=info
+
+iptables -A INPUT -p icmp -j DROP
+iptables -A FORWARD -p icmp -j DROP
+iptables -A OUTPUT -p icmp -j DROP
+
+# for tcp
+SSHLISTEN=$(grep ^Port /etc/ssh/sshd_config | awk '{print $2}')
+if [ -z "$SSHLISTEN" ];then
+  echo "Do not set sshd"
+else
+  myssh=${SSHLISTEN}
+  iptables -A INPUT -i eth0 -p tcp -s ${HOMENET} --dport ${myssh} \
+    -m state --state NEW -m recent --set --name SSH
+  iptables -A INPUT -i eth0 -p tcp -s ${HOMENET} --dport ${myssh} \
+    -m state --state NEW -m recent --update --seconds 60 \
+    --hitcount 8 --rttl --name SSH -j DROP
+  iptables -A INPUT -i eth0 -p tcp -s ${HOMENET} --dport ${myssh} \
+    -m state --state ESTABLISHED -j ACCEPT
+  iptables -A INPUT -i eth0 -p tcp -s ${HOMENET} --dport ${myssh} \
+    -m state --state RELATED -j DROP
+fi
+
+iptables -A INPUT -i eth0 -p tcp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-in " --log-level=info
+iptables -A FORWARD -i eth0 -p tcp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-fo " --log-level=info
+iptables -A OUTPUT -o eth0 -p tcp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-ou " --log-level=info
+
+iptables -A INPUT -i eth0 -p tcp -j ACCEPT
+iptables -A FORWARD -i eth0 -p tcp -j DROP 
+iptables -A OUTPUT -o eth0 -p tcp -j ACCEPT
+
+iptables -A INPUT -p tcp \
+  -j LOG --log-prefix "iptables-in " --log-level=info
+iptables -A FORWARD -p tcp \
+  -j LOG --log-prefix "iptables-fo " --log-level=info
+iptables -A OUTPUT -p tcp \
+  -j LOG --log-prefix "iptables-ou " --log-level=info
+
+iptables -A INPUT -p tcp -j DROP
+iptables -A FORWARD -p tcp -j DROP
+iptables -A OUTPUT -p tcp -j DROP
+
+# for UDP
+
+iptables -A INPUT -i eth0 -p udp -m multiport --ports 0:1024 -j ACCEPT
+iptables -A FORWARD -i eth0 -p udp -j DROP
+iptables -A OUTPUT -o eth0 -p udp -m multiport --ports 0:1024 -j ACCEPT
+
+iptables -A INPUT -i eth0 -p udp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-in " --log-level=info
+iptables -A FORWARD -i eth0 -p udp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-fo " --log-level=info
+iptables -A OUTPUT -o eth0 -p udp ${LIMITOPT} \
+  -j LOG --log-prefix "iptables-ou " --log-level=info
+
+iptables -A INPUT -p udp -j DROP
+iptables -A FORWARD -p udp -j DROP
+iptables -A OUTPUT -p udp -j DROP
+
+# Other
+iptables -A INPUT -p all \
+  -j LOG --log-prefix "iptables-in " --log-level=info
+iptables -A FORWARD -p all \
+  -j LOG --log-prefix "iptables-fo " --log-level=info
+iptables -A OUTPUT -p all \
+  -j LOG --log-prefix "iptables-ou " --log-level=info
+
+iptables -A INPUT -p all -j DROP
+iptables -A FORWARD -p all -j DROP
+iptables -A OUTPUT -p all -j DROP
+
+# Policy
+iptables -P INPUT DROP
+iptables -P FORWARD DROP 
+iptables -P OUTPUT DROP

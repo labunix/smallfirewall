@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [ `id -u` -ne "0" ] ;then
+  echo "Sorry,Not Permit User"
+  exit 1
+fi
+
+grep "IN=" /var/log/syslog | \
+  sed s/".*IN="/"IN="/g | sed s/" "/"\n"/g | \
+  grep -v "^LEN\|^TOS\|^PREC\|^TTL\|^ID\|^MAC\|^DF\|^WINDOW\|^RES\|^URGP" | \
+  grep -v "^\$" | xargs echo -n | sed s/" "/","/g | \
+  sed s/"IN="/"\n&"/g | sed s/",\$"/"\n"/g \
+        > /var/log/sfwreport.log
+echo "" >> /var/log/sfwreport.log
+sort /var/log/sfwreport.log | uniq -c | grep "," | sort -k 1 -n -r | \
+  mail -s "sfw report mail" root
+

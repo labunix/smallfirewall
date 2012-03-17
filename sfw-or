@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
-echo $PATH | sed s/":"/"\n"/g | grep "^/usr/sbin\$" || \
+echo $PATH | sed s/":"/"\n"/g | grep "^/usr/sbin\$" > /dev/null 2>&1 || \
   export PATH=/usr/sbin:${PATH}
-echo $PATH | sed s/":"/"\n"/g | grep "^/sbin\$" || \
+echo $PATH | sed s/":"/"\n"/g | grep "^/sbin\$" > /dev/null 2>&1 || \
   export PATH=/sbin:${PATH}
 
 if [ `id -u` -ne 0 ];then

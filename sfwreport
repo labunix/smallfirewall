@@ -5,17 +5,29 @@ if [ `id -u` -ne "0" ] ;then
   exit 1
 fi
 
-grep "IN=" /var/log/syslog | \
+if [ -f /var/log/iptables.log ];then
+  SRCLOG=/var/log/iptables.log
+else
+  SRCLOG=/var/log/syslog
+fi
+
+SFWTEMP=/var/log/sfwreport.tmp
+SFWLOG=/var/log/sfwreport.log
+
+grep "IN=" ${SRCLOG} | \
   sed s/".*IN="/"IN="/g | \
-  sort | uniq | \
-  sed s/" "/"\n"/g | \
-  grep -v "^LEN\|^TOS\|^PREC\|^TTL\|^ID\|^MAC\|^DF\|^WINDOW\|^RES\|^URGP" | \
-  grep -v "^\$" > /var/log/sfwreport.tmp
+  sed s/"LEN=[0-9]* \|TOS=0x[0-9A-Fa-f]* \|PREC=0x[0-9A-Fa-f]* "//g | \
+  sed s/"TTL=[0-9]* \|DF \|WINDOW=[0-9]* \|ACK \|PSH \|URGP=[0-9]* "//g | \
+  sed s/"RES=0x[0-9]* \|SYN \|ID=[0-9]* "//g | \
+  sed s/" MAC=..:..:..:..:..:..:..:..:..:..:..:..:..:.. "//g > ${SFWTEMP}
 
-  sed s/" "/","/g /var/log/sfwreport.tmp | \
-  sed s/"IN="/"\n&"/g | sed s/",\$"/"\n"/g \
-        > /var/log/sfwreport.log
-echo "" >> /var/log/sfwreport.log
-sort /var/log/sfwreport.log | uniq -c | grep "," | sort -k 1 -n -r | \
-  mail -s "sfw report mail" root
-
+cat ${SFWTEMP} | sed s/"IN= \|OUT= "//g | \
+  sed s/"IN="/'-i '/g | \
+  sed s/"OUT="/'-o '/g | \
+  sed s/"SRC="/'-s '/g | \
+  sed s/"DST="/'-d '/g | \
+  sed s/"PROTO="/'-p '/g | \
+  sed s/"SPT="/'--sport '/g | \
+  sed s/"DPT="/'--dport '/g | \
+  sed s/^/"iptables "/g > ${SFWLOG}
+exit 0

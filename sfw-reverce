@@ -1,0 +1,20 @@
+#!/bin/bash
+
+SAVEFILE=/etc/iptables-save
+
+if [ ! -f ${SAVEFILE} ];then
+  echo "check $0 SAVEFILE"
+  exit 2
+fi
+
+# for comment out,COMMIT,NULL line
+cat ${SAVEFILE} | grep -v "^\#\|^COMMIT\|^\$" | \
+  # for only filter
+  grep -v "^\*filter" | \
+  # for Policy
+  sed s/"^:"/"-P "/g | \
+  # for all
+  sed s/"^"/"iptables "/g | \
+  # for counter
+  sed s/" \[.*\]"//g
+  # for type

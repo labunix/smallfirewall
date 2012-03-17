@@ -20,13 +20,15 @@ grep "IN=" ${SRCLOG} | \
   sed s/"RES=0x[0-9]* \|SYN \|ID=[0-9]* "//g | \
   sed s/" MAC=..:..:..:..:..:..:..:..:..:..:..:..:..:.. "//g > ${SFWTEMP}
 
-cat ${SFWTEMP} | sed s/"IN= \|OUT= "//g | \
-  sed s/"IN="/'-i '/g | \
-  sed s/"OUT="/'-o '/g | \
+cat ${SFWTEMP} | sed s/"OUT=SRC="/"OUT= SRC="/g | \
+  sed s/"IN= \|OUT= "//g | \
+  sed s/"IN="/'INPUT -i '/g | \
+  sed s/"OUT="/'OUTPUT -o '/g | \
   sed s/"SRC="/'-s '/g | \
   sed s/"DST="/'-d '/g | \
   sed s/"PROTO="/'-p '/g | \
   sed s/"SPT="/'--sport '/g | \
   sed s/"DPT="/'--dport '/g | \
-  sed s/^/'iptables -A '/g > ${SFWLOG}
+  sed s/^/'iptables -A '/g | \
+  sed s/"\$"/'-j ACCEPT'"&"/g > ${SFWLOG}
 exit 0

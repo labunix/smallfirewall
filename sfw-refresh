@@ -11,4 +11,4 @@ if [ `id -u` -ne "0" ];then
 fi
 
 iptables-save -c > /etc/iptables-save
-sfw-reverce > /etc/smallfirewall
+./sfw-reverce > /etc/smallfirewall

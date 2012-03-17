@@ -5,11 +5,10 @@ if [ `id -u` -ne "0" ] ;then
   exit 1
 fi
 
-if [ -f /var/log/iptables.log ];then
-  SRCLOG=/var/log/iptables.log
-else
-  SRCLOG=/var/log/syslog
-fi
+SRCLOG=/var/log/iptables.log
+#SRCLOG=/var/log/syslog
+#SRCLOG=/var/log/messages
+#SRCLOG=/var/adm/messages
 
 SFWTEMP=/var/log/sfwreport.tmp
 SFWLOG=/var/log/sfwreport.log

@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+echo $PATH | sed s/":"/"\n"/g | grep "^/usr/sbin\$" || \
+  export PATH=/usr/sbin:${PATH}
+echo $PATH | sed s/":"/"\n"/g | grep "^/sbin\$" || \
+  export PATH=/sbin:${PATH}
+
+if [ `id -u` -ne 0 ];then
+  echo "Sorry,Not Permit User!"
+  exit 2
+fi
+
+iptables-apply -t 10 /etc/iptables-save || \
+  iptables-restore -c /etc/iptables-save

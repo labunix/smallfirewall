@@ -28,5 +28,5 @@ cat ${SFWTEMP} | sed s/"IN= \|OUT= "//g | \
   sed s/"PROTO="/'-p '/g | \
   sed s/"SPT="/'--sport '/g | \
   sed s/"DPT="/'--dport '/g | \
-  sed s/^/"iptables "/g > ${SFWLOG}
+  sed s/^/'iptables -A '/g > ${SFWLOG}
 exit 0

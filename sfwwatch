@@ -1,8 +1,0 @@
-#!/bin/bash
-
-if [ `id -u` -ne "0" ];then
-  echo "Sorry,Not Permit User"
-  exit 2
-fi
-
-watch -d -n 1 'iptables -L -v -n "DROP\|LOG\|Chain" | grep -v "^    0"'

@@ -40,6 +40,7 @@ grep "iptables.* IN" "$SFWLOG" | \
   sed s/"^"/"\[0:0\] -A "/g | \
   sed s/'\(--icmp-type [0-9]*\) \[.*'/" \1 "/g | \
   sed s/"  *"/" "/g | \
+  sed s/"\$"/" -j ACCEPT"/g | \
   sort -k 4 -u > "$SFWREP"
 
 

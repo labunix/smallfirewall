@@ -73,8 +73,10 @@ unset SFWINIT
 echo -n "So many all filter log output?[Y|n] :"
 read yn
 if [ "$yn" == "Y" ];then
+  iptables -t filter -A INPUT -i lo -j ACCEPT
   iptables -t filter -A INPUT -j LOG --log-prefix "iptables-in " --log-level 7
   iptables -t filter -A FORWARD -j LOG --log-prefix "iptables-fw " --log-level 7
+  iptables -t filter -A OUTPUT -o lo -j ACCEPT
   iptables -t filter -A OUTPUT -j LOG --log-prefix "iptables-ou " --log-level 7
 fi
 
@@ -87,6 +89,7 @@ if [ "$yn" == "Y" ];then
   echo "if system restart,clear"
   echo "FILE:/etc/sysctl.conf"
   echo "net.ipv4.ip_forward=1"
+  echo -e "\n\n\n\n\n"
   echo "Your system check..."
   grep ip_forward /etc/sysctl.conf
 fi

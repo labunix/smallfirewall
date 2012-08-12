@@ -37,21 +37,31 @@ start)
   ;;
 stop)
   echo "backup to /etc/iptables-save.bak"
-  cat /etc/iptables-save | tee /etc/iptables-save.bak
-  iptables-save -c | tee /etc/iptables-save
+  cat /etc/iptables-save > /etc/iptables-save.bak
+  iptables-save -c > /etc/iptables-save
   sfwflush "Stop iptables..."
   exit 0
   ;;
 reload|restart)
-  echo "backup to /etc/iptables-save.bak"
-  cat /etc/iptables-save | tee /etc/iptables-save.bak
-  iptables-save -c | tee /etc/iptables-save
+  echo "backup /etc/iptables-save"
+  cat /etc/iptables-save > /etc/iptables-save.bak
+  iptables-save -c > /etc/iptables-save
   sfwflush "Stop iptables..."
   iptables-restore -c /etc/iptables-save
   exit 0
   ;;
+reconfigure)
+  echo "backup Runnig iptables"
+  iptables-save -c > /etc/iptables-save.bak
+  sfwflush "Stop iptables..."
+  iptables-restore -c /etc/iptables-save
+  exit 0
+  exit 0
+  ;;
 *)
-  echo "Usage: $0 {start|stop|reload|restart}"
+  echo "Usage: $0 {start|stop|reload|reconfigure|restart}"
+  echo "[reload]      save Running iptables."
+  echo "[reconfigure] save /etc/iptables-save."
   exit 1
   ;;
 esac

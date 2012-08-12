@@ -32,7 +32,7 @@ grep "iptables.* IN" "$SFWLOG" | \
   sed s/"SPT="/' --sport '/g | \
   sed s/"DPT="/' --dport '/g | \
   sed s/"TYPE="/' --icmp-type '/g | \
-  sed s/"-[sd] $MYIP"//g | \
+  sed s/"-[sd] $MYIP"/" "/g | \
   sed s/"TCP"/'tcp -m tcp'/g | \
   sed s/"UDP"/'udp -m udp'/g | \
   sed s/"ICMP"/'icmp -m icmp'/g | \

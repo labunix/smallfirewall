@@ -21,6 +21,7 @@ grep "iptables.* IN" "$SFWLOG" | \
   sed s/'iptables-npr'/' PREROUTING '/g | \
   sed s/'iptables-npo'/' POSTROUTING '/g | \
   sed s/'iptables-nou'/' OUTPUT '/g | \
+  sed s/"iptables"//g | \
   sed s/"IN=\$"//g | \
   sed s/"IN="/' -i '/g | \
   sed s/"OUT=\$"//g | \
@@ -43,5 +44,7 @@ grep "iptables.* IN" "$SFWLOG" | \
   sed s/"\$"/" -j ACCEPT"/g | \
   sort -k 4 -u > "$SFWREP"
 
+cat "$SFWREP" | mail -s "sfw iptables report `env LANG=C date`" $SFWMAIL
+unset SFWREP SFWLOG MYIP SFWMAIL
 
 

@@ -1,5 +1,8 @@
 this program is "iptables support tool"
-name is smallfirewall
-See also
-# /bin/bash smallfirewall --help
+Step 1
+if your system are squeeze,only run sfw 
+# /bin/bash sfw
+Step 2
+log to report.iptables-save format.
+# /bin/bash sfwreport.sh
 

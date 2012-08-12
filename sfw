@@ -1,0 +1,105 @@
+#!/bin/bash
+#
+# GNU GENERAL PUBLIC LICENSE
+# Version 2, June 1991
+#
+# See Also
+# http://www.gnu.org/licenses/gpl-2.0.html
+#
+# Author: labunix@linux.jp
+# Last Update 2012/08/13
+#
+# support only debian lenny or squeeze
+# IPv4 Only
+#
+#
+set -e
+
+# only root
+if [ `id -u` -ne 0 ];then
+  echo "Sorry,Not Permit User!"
+  exit 1
+fi
+
+# check PATH "/sbin:/usr/sbin"
+echo "$PATH" | grep sbin || export PATH=/sbin:/usr/sbin:$PATH
+
+# check and install
+SERVICE="iptables rsyslog"
+PKGLIST="${SERVICE} chkconfig insserv"
+
+for list in ${PKGLIST};do \
+  dpkg -l | grep "$list" | grep ^ii > /dev/null 2>&1 || \
+    apt-get install -y "$list"
+  dpkg -l | grep "$list" | grep ^ii | awk '{print $2,$3}'
+done
+unset PKGLIST list
+
+# check service
+RUNLEVEL=`grep ^id /etc/inittab | awk -F\: '{print $2}'`
+for list in ${SERVICE};do \
+  chkconfig --list "$list" > /dev/null 2>&1 || chkconfig -add "$list"
+  chkconfig --list "$list" | grep "${RUNLEVEL}\:on" > /dev/null 2>&1 || \
+  chkconfig "$list" on
+done
+unset RUNLEVEL SERVICE list
+
+# iptables config save
+SFWSAVE=/etc/iptables-save
+test -f "${SFWSAVE}.org" || test -f "$SFWSAVE" && mv "$SFWSAVE" "${SFWSAVE}.org"
+touch "$SFWSAVE"
+unset SFWSAVE
+
+# All kern.debug log write it.Not write other log.
+# See also "iptables.conf"
+SFWLOG=/var/log/iptables.log
+touch "$SFWLOG"
+unset SFWLOG
+
+# rsyslog.d
+SFWRSYSLOG=/etc/rsyslog.d
+test -d "$SFWRSYSLOG" && cp iptables.conf "$SFWRSYSLOG"
+chmod 644 "$SFWRSYSLOG" && /etc/init.d/rsyslog restart
+unset SFWSSYSLOG
+
+# init.d
+SFWINIT=/etc/init.d/iptables
+test -f "${SFWINIT}.org" || test -f "$SFWINIT" && mv "$SFWINIT" "${SFWINIT}.org"
+cp iptables "$SFWINIT"
+chmod 755 "$SFWINIT" && /etc/init.d/iptables start
+unset SFWINIT
+
+# 1st filter log
+echo -n "So many all filter log output?[Y|n] :"
+read yn
+if [ "$yn" == "Y" ];then
+  iptables -t filter -A INPUT -j LOG --log-prefix "iptables-in " --log-level 7
+  iptables -t filter -A FORWARD -j LOG --log-prefix "iptables-fw " --log-level 7
+  iptables -t filter -A OUTPUT -j LOG --log-prefix "iptables-ou " --log-level 7
+fi
+
+# enable nat
+echo -n "You want to nat enble?[Y|n] :"
+read yn
+if [ "$yn" == "Y" ];then
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+  # grep ip_forward /etc/sysctl.conf
+  echo "if system restart,clear"
+  echo "FILE:/etc/sysctl.conf"
+  echo "net.ipv4.ip_forward=1"
+  echo "Your system check..."
+  grep ip_forward /etc/sysctl.conf
+fi
+
+#1st nat log
+echo -n "So many all nat log output?[Y|n] :"
+read yn
+if [ "$yn" == "Y"];then
+  iptables -t nat -A PREROUTING -j LOG --log-prefix "iptables-npr " --log-level 7
+  iptables -t nat -A POSTROUTING-j LOG --log-prefix "iptables-npo " --log-level 7
+  iptables -t nat -A OUTPUT -j LOG --log-prefix "iptables-nou " --log-level 7
+fi
+/etc/init.d/iptables restart
+
+
+

@@ -14,7 +14,7 @@
 function myreset() {
   echo -n "$@"
   if [ -s "${MYSAVE}" ];then
-    mv "$MYSAVE" "$MYBACK"
+    mv "$MYSAVE" "$MYBACK" && echo -ne "\nSave...\n $MYBACK\n"
   else
     rm "$MYBACK"
   fi

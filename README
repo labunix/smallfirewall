@@ -1,8 +1,12 @@
 this program is "iptables support tool"
 Step 1
 if your system are squeeze,only run sfw 
-# /bin/bash sfw
+# cp -pi iptables /etc/init.d/iptables && chmod +x /etc/init.d/iptables
 Step 2
-log to report.iptables-save format.
-# /bin/bash sfwreport.sh
+# /etc/init.d/iptables stop
+Step 3
+# vim /etc/iptables-save
+Step 4
+# /etc/init.d/iptables start
+
 

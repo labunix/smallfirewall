@@ -81,7 +81,7 @@ test -f "$MYSAVE" || myreset "ERROR : touch $MYSAVE"
 test -f "$MYBACK" || touch "$MYBACK"
 test -f "$MYBACK" || myreset "ERROR : touch $MYBACK"
 
-if [ "`id -u` -ne "0" ];then
+if [ "`id -u`" -ne "0" ];then
   myreset "ERROR : Sorry, Not Permit User!"
 fi
 

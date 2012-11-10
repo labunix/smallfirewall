@@ -1,69 +1,107 @@
 #!/bin/bash
-# Start/stop the iptables script.
-#
 ### BEGIN INIT INFO
 # Provides:          iptables
 # Required-Start:    $remote_fs $syslog $time
 # Required-Stop:     $remote_fs $syslog $time
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Custom background script
-# Description:       iptables v1.4.2 for Squeeze
-#                    Last Update:2012/08/13
+# Short-Description: Custom script for iptables
+# Description:       Custom script for iptables (Squeeze)
+#                    Last Update:2012/11/10
 #                    Author     :labunix@linux.jp
-#                    IPv4 only
 ### END INIT INFO
-#
-# environment
-#export PATH=/sbin:/usr/sbin:/bin:/usr/bin
-set -e
 
-function sfwflush() {
-  echo $@
-  iptables -F
-  iptables -F -t nat
-  iptables -X
-  iptables -P INPUT ACCEPT
-  iptables -P FORWARD ACCEPT
-  iptables -P OUTPUT ACCEPT
+function myreset() {
+  echo -n "$@"
+  if [ -s "${MYSAVE}" ];then
+    mv "$MYSAVE" "$MYBACK"
+  else
+    rm "$MYBACK"
+  fi
+  iptables-save -c > "${MYSAVE}"
+
+  # delete filter rules
+  for MYFILTER in INPUT OUTPUT FORWARD;do
+    iptables -t filter -F "$MYFILTER"
+  done
+  iptables -t filter -F
+  unset MYFILTER
+
+  # delete mangle rules
+  for MYMANGLE in PREROUTING POSTROUTING INPUT OUTPUT FORWARD;do
+    iptables -t mangle -F "$MYMANGLE"
+  done
+  iptables -t mangle -F
+  unset MYMANGLE
+
+  # delete nat rules
+  for MYNAT in PREROUTING POSTROUTING OUTPUT;do
+    iptables -t nat -F "$MYNAT"
+  done
+  iptables -t nat -F
+  unset MYNAT
+
+  # delete raw rules
+  for MYRAW in PREROUTING OUTPUT;do
+    iptables -t raw -F "$MYRAW"
+  done
+  iptables -t raw -F
+  unset MYRAW
+
+  # delete policy rules
+  for MYPOLICY in INPUT OUTPUT FORWARD;do
+    iptables -P "$MYPOLICY" ACCEPT
+  done
+  unset MYPOLICY
+
+  # delete custom chain
+  iptables -L | grep Chain | grep -v "INPUT\|OUTPUT\|FORWARD" | \
+  for MYCHAIN in `xargs`;do
+    iptables -X "$MYCHAIN"
+  done
+  unset MYCHAIN
+
+  # argument check
+  if [ "$1" == "ERROR" ];then
+    exit 1
+  fi
+
+  # ending
+  unset MYUNIXTIME MYSAVE MYBACK
+  echo "done"
+  exit 0
 }
 
-# for save and restore
-test -f /etc/iptables-save || touch /etc/iptables-save
+# save file and backup file
+MYUNIXTIME=`date '+%s'`
+MYSAVE="/etc/iptables-save"
+MYBACK="${MYSAVE}.${MYUNIXTIME}"
+test -f "$MYSAVE" || touch "$MYSAVE"
+test -f "$MYSAVE" || myreset "ERROR : touch $MYSAVE"
+test -f "$MYBACK" || touch "$MYBACK"
+test -f "$MYBACK" || myreset "ERROR : touch $MYBACK"
+
+if [ "`id -u` -ne "0" ];then
+  myreset "ERROR : Sorry, Not Permit User!"
+fi
+
+chmod 600 "$MYSAVE" || myreset "ERROR : chmod $MYSAVE"
+chmod 600 "$MYBACK" || myreset "ERROR : chmod $MYBACK"
+
 case $1 in
 start)
-  iptables-restore -c /etc/iptables-save
-  exit 0
+  echo -n "$0 starting... "
+  iptables-restore -c "$MYSAVE" || myreset "ERROR : iptables not start!"
+  echo "done"
   ;;
 stop)
-  echo "backup to /etc/iptables-save.bak"
-  cat /etc/iptables-save > /etc/iptables-save.bak
-  iptables-save -c > /etc/iptables-save
-  sfwflush "Stop iptables..."
-  exit 0
-  ;;
-reload|restart)
-  echo "backup /etc/iptables-save"
-  cat /etc/iptables-save > /etc/iptables-save.bak
-  iptables-save -c > /etc/iptables-save
-  sfwflush "Stop iptables..."
-  iptables-restore -c /etc/iptables-save
-  exit 0
-  ;;
-reconfigure)
-  echo "backup Runnig iptables"
-  iptables-save -c > /etc/iptables-save.bak
-  sfwflush "Stop iptables..."
-  iptables-restore -c /etc/iptables-save
-  exit 0
-  exit 0
+  myreset "$0 stopping... "
   ;;
 *)
-  echo "Usage: $0 {start|stop|reload|reconfigure|restart}"
-  echo "[reload]      save Running iptables."
-  echo "[reconfigure] save /etc/iptables-save."
-  exit 1
+  echo "Usege $0 [start|stop]"
   ;;
 esac
-exit 0
 
+# ending for Usage
+unset MYUNIXTIME MYSAVE MYBACK
+exit 0
